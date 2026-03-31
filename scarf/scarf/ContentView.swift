@@ -28,6 +28,8 @@ struct ContentView: View {
             MemoryView()
         case .skills:
             SkillsView()
+        case .tools:
+            ToolsView()
         case .cron:
             CronView()
         case .logs:

@@ -19,7 +19,7 @@ struct SidebarView: View {
                 }
             }
             Section("Manage") {
-                ForEach([SidebarSection.cron, .logs, .settings]) { section in
+                ForEach([SidebarSection.tools, .cron, .logs, .settings]) { section in
                     Label(section.rawValue, systemImage: section.icon)
                         .tag(section)
                 }
