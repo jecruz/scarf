@@ -50,7 +50,17 @@ Scarf reads Hermes's SQLite database (schema v6) and parses CLI output from `her
 
 If a Hermes update changes the database schema or CLI output format, Scarf may need to be updated. Check the [Health](#features) view for compatibility warnings.
 
-## Building
+## Install
+
+### Pre-built Binary (no Xcode required)
+
+Download the latest universal binary (Apple Silicon + Intel) from [Releases](https://github.com/awizemann/scarf/releases):
+
+1. Download `Scarf-vX.X.X-Universal.zip`
+2. Unzip and drag **Scarf.app** to Applications
+3. On first launch, right-click and choose **Open** (or go to System Settings → Privacy & Security → Open Anyway)
+
+### Build from Source
 
 ```bash
 git clone https://github.com/awizemann/scarf.git
@@ -61,7 +71,7 @@ open scarf.xcodeproj
 Or from the command line:
 
 ```bash
-xcodebuild -project scarf/scarf.xcodeproj -scheme scarf -configuration Debug build
+xcodebuild -project scarf/scarf.xcodeproj -scheme scarf -configuration Release -arch arm64 -arch x86_64 ONLY_ACTIVE_ARCH=NO build
 ```
 
 ## Architecture
