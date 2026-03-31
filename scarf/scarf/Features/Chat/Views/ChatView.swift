@@ -106,11 +106,25 @@ struct ChatView: View {
 
             if viewModel.voiceEnabled {
                 Button {
+                    viewModel.toggleTTS()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.ttsEnabled ? "speaker.wave.2.fill" : "speaker.slash")
+                            .foregroundStyle(viewModel.ttsEnabled ? .green : .secondary)
+                        Text(viewModel.ttsEnabled ? "TTS On" : "TTS Off")
+                            .font(.caption)
+                            .foregroundStyle(viewModel.ttsEnabled ? .primary : .secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .help("Toggle text-to-speech (/voice tts)")
+
+                Button {
                     viewModel.pushToTalk()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: viewModel.isRecording ? "waveform.circle.fill" : "waveform.circle")
-                            .foregroundStyle(viewModel.isRecording ? .red : .accentColor)
+                            .foregroundStyle(viewModel.isRecording ? .red : Color.accentColor)
                             .symbolEffect(.pulse, isActive: viewModel.isRecording)
                         Text(viewModel.isRecording ? "Recording..." : "Push to Talk")
                             .font(.caption)
