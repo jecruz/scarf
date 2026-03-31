@@ -1,8 +1,19 @@
-# Scarf
+<p align="center">
+  <img src="icon.png" width="128" height="128" alt="Scarf app icon">
+</p>
 
-A native macOS companion app for the [Hermes AI agent](https://github.com/hermes-ai/hermes-agent). Scarf gives you full visibility into what Hermes is doing, when, and what it creates — replacing CLI opacity with a clean, native interface.
+<h1 align="center">Scarf</h1>
 
-![macOS](https://img.shields.io/badge/macOS-26.2+-blue) ![Swift](https://img.shields.io/badge/Swift-6-orange) ![License](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  A native macOS companion app for the <a href="https://github.com/hermes-ai/hermes-agent">Hermes AI agent</a>.<br>
+  Full visibility into what Hermes is doing, when, and what it creates.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-26.2+-blue" alt="macOS">
+  <img src="https://img.shields.io/badge/Swift-6-orange" alt="Swift">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+</p>
 
 ## Features
 
