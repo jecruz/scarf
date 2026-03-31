@@ -5,12 +5,14 @@ struct ScarfApp: App {
     @State private var coordinator = AppCoordinator()
     @State private var fileWatcher = HermesFileWatcher()
     @State private var menuBarStatus = MenuBarStatus()
+    @State private var chatViewModel = ChatViewModel()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(coordinator)
                 .environment(fileWatcher)
+                .environment(chatViewModel)
                 .onAppear {
                     fileWatcher.startWatching()
                     menuBarStatus.startPolling()
