@@ -2,88 +2,164 @@ import SwiftUI
 
 struct HealthView: View {
     @State private var viewModel = HealthViewModel()
+    @State private var expandedSection: UUID?
+    @State private var selectedTab = 0
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                headerSection
-                if !viewModel.statusSections.isEmpty {
-                    sectionGroup("Status", sections: viewModel.statusSections)
-                }
-                if !viewModel.doctorSections.isEmpty {
-                    sectionGroup("Diagnostics", sections: viewModel.doctorSections)
-                }
+        VStack(spacing: 0) {
+            headerBar
+            Divider()
+            Picker("", selection: $selectedTab) {
+                Text("Status").tag(0)
+                Text("Diagnostics").tag(1)
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 300)
+            .padding(.vertical, 8)
+            Divider()
+            ScrollView {
+                sectionGrid(selectedTab == 0 ? viewModel.statusSections : viewModel.doctorSections)
+                    .padding()
+            }
         }
         .navigationTitle("Health")
         .onAppear { viewModel.load() }
     }
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                if !viewModel.version.isEmpty {
-                    Text(viewModel.version)
-                        .font(.system(.body, design: .monospaced))
-                }
-                Spacer()
-                Button("Refresh") { viewModel.load() }
-                    .controlSize(.small)
+    // MARK: - Header
+
+    private var headerBar: some View {
+        HStack(spacing: 16) {
+            if !viewModel.version.isEmpty {
+                Text(viewModel.version)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
             }
 
             if viewModel.hasUpdate {
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.2.circlepath")
-                        .foregroundStyle(.orange)
+                        .font(.caption2)
                     Text(viewModel.updateInfo)
                         .font(.caption)
-                    Text("Run `hermes update` in terminal")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.orange.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .foregroundStyle(.orange)
             }
 
-            HStack(spacing: 16) {
-                CountBadge(count: viewModel.okCount, label: "Passing", color: .green, icon: "checkmark.circle.fill")
-                CountBadge(count: viewModel.warningCount, label: "Warnings", color: .orange, icon: "exclamationmark.triangle.fill")
-                CountBadge(count: viewModel.issueCount, label: "Issues", color: .red, icon: "xmark.circle.fill")
+            Spacer()
+
+            HStack(spacing: 12) {
+                MiniCount(count: viewModel.okCount, color: .green, icon: "checkmark.circle.fill")
+                MiniCount(count: viewModel.warningCount, color: .orange, icon: "exclamationmark.triangle.fill")
+                MiniCount(count: viewModel.issueCount, color: .red, icon: "xmark.circle.fill")
             }
+
+            Button("Refresh") { viewModel.load() }
+                .controlSize(.small)
         }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
     }
 
-    private func sectionGroup(_ title: String, sections: [HealthSection]) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.title3.bold())
+    // MARK: - Grid
+
+    private func sectionGrid(_ sections: [HealthSection]) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             ForEach(sections) { section in
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: section.icon)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 16)
-                        Text(section.title)
-                            .font(.headline)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(section.checks) { check in
-                            CheckRow(check: check)
+                SectionCard(
+                    section: section,
+                    isExpanded: expandedSection == section.id,
+                    onTap: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            expandedSection = expandedSection == section.id ? nil : section.id
                         }
                     }
-                    .padding(.leading, 22)
-                }
-                .padding(12)
-                .background(.quaternary.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                )
             }
         }
     }
 }
+
+// MARK: - Section Card
+
+struct SectionCard: View {
+    let section: HealthSection
+    let isExpanded: Bool
+    let onTap: () -> Void
+
+    private var okCount: Int { section.checks.filter { $0.status == .ok }.count }
+    private var warnCount: Int { section.checks.filter { $0.status == .warning }.count }
+    private var errorCount: Int { section.checks.filter { $0.status == .error }.count }
+
+    private var accentColor: Color {
+        if errorCount > 0 { return .red }
+        if warnCount > 0 { return .orange }
+        return .green
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button(action: onTap) {
+                HStack(spacing: 10) {
+                    Image(systemName: section.icon)
+                        .font(.title3)
+                        .foregroundStyle(accentColor)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(section.title)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        HStack(spacing: 8) {
+                            if okCount > 0 {
+                                HStack(spacing: 2) {
+                                    Circle().fill(.green).frame(width: 5, height: 5)
+                                    Text("\(okCount)").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            if warnCount > 0 {
+                                HStack(spacing: 2) {
+                                    Circle().fill(.orange).frame(width: 5, height: 5)
+                                    Text("\(warnCount)").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            if errorCount > 0 {
+                                HStack(spacing: 2) {
+                                    Circle().fill(.red).frame(width: 5, height: 5)
+                                    Text("\(errorCount)").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(12)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Divider()
+                    .padding(.horizontal, 12)
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(section.checks) { check in
+                        CheckRow(check: check)
+                    }
+                }
+                .padding(12)
+            }
+        }
+        .background(.quaternary.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(accentColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Check Row
 
 struct CheckRow: View {
     let check: HealthCheck
@@ -92,9 +168,10 @@ struct CheckRow: View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: statusIcon)
                 .foregroundStyle(statusColor)
-                .font(.caption)
-                .frame(width: 14)
-            VStack(alignment: .leading, spacing: 1) {
+                .font(.system(size: 9))
+                .frame(width: 12, alignment: .center)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 0) {
                 Text(check.label)
                     .font(.caption)
                 if let detail = check.detail {
@@ -104,7 +181,6 @@ struct CheckRow: View {
                 }
             }
         }
-        .padding(.vertical, 1)
     }
 
     private var statusIcon: String {
@@ -124,25 +200,20 @@ struct CheckRow: View {
     }
 }
 
-struct CountBadge: View {
+// MARK: - Mini Count
+
+struct MiniCount: View {
     let count: Int
-    let label: String
     let color: Color
     let icon: String
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 3) {
             Image(systemName: icon)
                 .foregroundStyle(color)
+                .font(.caption2)
             Text("\(count)")
-                .font(.system(.title3, design: .monospaced, weight: .semibold))
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption.monospaced().bold())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.quaternary.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
