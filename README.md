@@ -27,6 +27,7 @@
 - **Memory Viewer/Editor** — View and edit Hermes's MEMORY.md and USER.md with live file-watcher refresh
 - **Skills Browser** — Browse all installed skills by category with file content viewer and file switcher
 - **Tools Manager** — Enable/disable toolsets per platform (CLI, Telegram, Discord, etc.) with toggle switches, MCP server status
+- **Gateway Control** — Start/stop/restart the messaging gateway, view platform connection status, manage user pairing (approve/revoke)
 - **Cron Manager** — View scheduled jobs, their status, prompts, and output
 - **Log Viewer** — Real-time log tailing with level filtering and text search
 - **Settings** — Configuration display with raw YAML viewer and Finder path links
@@ -70,6 +71,7 @@ scarf/
     Memory/       Memory viewer and editor
     Skills/       Skill browser by category
     Tools/        Toolset management per platform
+    Gateway/      Messaging gateway control and pairing
     Cron/         Scheduled job viewer
     Logs/         Real-time log viewer
     Settings/     Configuration display
@@ -92,6 +94,8 @@ Scarf reads Hermes data directly from `~/.hermes/`:
 | `hermes chat` | Terminal subprocess | Interactive |
 | `hermes tools` | CLI commands | Enable/Disable |
 | `hermes sessions` | CLI commands | Rename/Delete/Export |
+| `hermes gateway` | CLI commands | Start/Stop/Restart |
+| `hermes pairing` | CLI commands | Approve/Revoke |
 
 The app opens `state.db` in read-only mode to avoid WAL contention with Hermes. Management actions (tool toggles, session rename/delete/export) go through the Hermes CLI.
 
