@@ -56,7 +56,6 @@ struct DashboardView: View {
                 StatCard(label: "Messages", value: "\(viewModel.stats.totalMessages)")
                 StatCard(label: "Tool Calls", value: "\(viewModel.stats.totalToolCalls)")
                 StatCard(label: "Tokens", value: formatTokens(viewModel.stats.totalInputTokens + viewModel.stats.totalOutputTokens))
-                StatCard(label: "Est. Cost", value: String(format: "$%.2f", viewModel.stats.totalCostUSD))
             }
         }
     }

@@ -17,7 +17,7 @@
 
 ## Features
 
-- **Dashboard** — System health, token usage, cost tracking, recent sessions at a glance
+- **Dashboard** — System health, token usage, recent sessions at a glance
 - **Sessions Browser** — Full conversation history with message rendering, tool call inspection, and full-text search (FTS5)
 - **Activity Feed** — Recent tool execution log with filtering by kind (read/edit/execute/fetch/browser) and detail inspector
 - **Live Chat** — Embedded terminal running `hermes chat` with full ANSI color and Rich formatting via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm)
