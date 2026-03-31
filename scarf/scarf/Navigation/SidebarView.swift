@@ -7,7 +7,7 @@ struct SidebarView: View {
         @Bindable var coordinator = coordinator
         List(selection: $coordinator.selectedSection) {
             Section("Monitor") {
-                ForEach([SidebarSection.dashboard, .sessions, .activity]) { section in
+                ForEach([SidebarSection.dashboard, .insights, .sessions, .activity]) { section in
                     Label(section.rawValue, systemImage: section.icon)
                         .tag(section)
                 }
@@ -19,7 +19,7 @@ struct SidebarView: View {
                 }
             }
             Section("Manage") {
-                ForEach([SidebarSection.cron, .logs, .settings]) { section in
+                ForEach([SidebarSection.tools, .gateway, .cron, .health, .logs, .settings]) { section in
                     Label(section.rawValue, systemImage: section.icon)
                         .tag(section)
                 }

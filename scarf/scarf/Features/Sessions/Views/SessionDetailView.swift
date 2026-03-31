@@ -4,6 +4,9 @@ struct SessionDetailView: View {
     let session: HermesSession
     let messages: [HermesMessage]
     var preview: String?
+    var onRename: (() -> Void)?
+    var onExport: (() -> Void)?
+    var onDelete: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -16,22 +19,41 @@ struct SessionDetailView: View {
 
     private var sessionHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(preview ?? session.displayTitle)
-                .font(.title3.bold())
+            HStack {
+                Text(preview ?? session.displayTitle)
+                    .font(.title3.bold())
+                Spacer()
+                if onRename != nil || onExport != nil || onDelete != nil {
+                    Menu {
+                        if let onRename { Button("Rename...") { onRename() } }
+                        if let onExport { Button("Export...") { onExport() } }
+                        if let onDelete {
+                            Divider()
+                            Button("Delete...", role: .destructive) { onDelete() }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                }
+            }
             HStack(spacing: 16) {
                 Label(session.source, systemImage: session.sourceIcon)
                 Label(session.model ?? "unknown", systemImage: "cpu")
                 Label("\(session.messageCount) msgs", systemImage: "bubble.left")
                 Label("\(session.toolCallCount) tools", systemImage: "wrench")
-                if let cost = session.estimatedCostUSD {
-                    Label(String(format: "$%.4f", cost), systemImage: "dollarsign.circle")
-                }
                 if let date = session.startedAt {
                     Label(date.formatted(.dateTime.month().day().hour().minute()), systemImage: "calendar")
                 }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+            Text(session.id)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.tertiary)
+                .textSelection(.enabled)
         }
         .padding()
     }

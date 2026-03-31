@@ -183,6 +183,112 @@ actor HermesDataService {
         )
     }
 
+    // MARK: - Insights Queries
+
+    func fetchSessionsInPeriod(since: Date) -> [HermesSession] {
+        guard let db else { return [] }
+        let sql = """
+            SELECT id, source, user_id, model, title, parent_session_id,
+                   started_at, ended_at, end_reason, message_count, tool_call_count,
+                   input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
+                   estimated_cost_usd
+            FROM sessions
+            WHERE started_at >= ?
+            ORDER BY started_at DESC
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, since.timeIntervalSince1970)
+
+        var sessions: [HermesSession] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            sessions.append(sessionFromRow(stmt!))
+        }
+        return sessions
+    }
+
+    func fetchUserMessageCount(since: Date) -> Int {
+        guard let db else { return 0 }
+        let sql = """
+            SELECT COUNT(*) FROM messages m
+            JOIN sessions s ON m.session_id = s.id
+            WHERE m.role = 'user' AND s.started_at >= ?
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, since.timeIntervalSince1970)
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
+        return Int(sqlite3_column_int(stmt, 0))
+    }
+
+    func fetchToolUsage(since: Date) -> [(name: String, count: Int)] {
+        guard let db else { return [] }
+        let sql = """
+            SELECT m.tool_name, COUNT(*) as cnt
+            FROM messages m
+            JOIN sessions s ON m.session_id = s.id
+            WHERE m.tool_name IS NOT NULL AND m.tool_name <> '' AND s.started_at >= ?
+            GROUP BY m.tool_name
+            ORDER BY cnt DESC
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, since.timeIntervalSince1970)
+
+        var results: [(name: String, count: Int)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let name = columnText(stmt!, 0)
+            let count = Int(sqlite3_column_int(stmt!, 1))
+            results.append((name: name, count: count))
+        }
+        return results
+    }
+
+    func fetchSessionStartHours(since: Date) -> [Int: Int] {
+        guard let db else { return [:] }
+        let sql = """
+            SELECT started_at FROM sessions WHERE started_at >= ?
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [:] }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, since.timeIntervalSince1970)
+
+        var hours: [Int: Int] = [:]
+        let calendar = Calendar.current
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let ts = sqlite3_column_double(stmt!, 0)
+            let date = Date(timeIntervalSince1970: ts)
+            let hour = calendar.component(.hour, from: date)
+            hours[hour, default: 0] += 1
+        }
+        return hours
+    }
+
+    func fetchSessionDaysOfWeek(since: Date) -> [Int: Int] {
+        guard let db else { return [:] }
+        let sql = """
+            SELECT started_at FROM sessions WHERE started_at >= ?
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [:] }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, since.timeIntervalSince1970)
+
+        var days: [Int: Int] = [:]
+        let calendar = Calendar.current
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let ts = sqlite3_column_double(stmt!, 0)
+            let date = Date(timeIntervalSince1970: ts)
+            let weekday = (calendar.component(.weekday, from: date) + 5) % 7 // Mon=0
+            days[weekday, default: 0] += 1
+        }
+        return days
+    }
+
     func stateDBModificationDate() -> Date? {
         let walPath = HermesPaths.stateDB + "-wal"
         let dbPath = HermesPaths.stateDB

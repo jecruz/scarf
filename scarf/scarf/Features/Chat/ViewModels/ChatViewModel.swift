@@ -5,11 +5,15 @@ import SwiftTerm
 @Observable
 final class ChatViewModel {
     private let dataService = HermesDataService()
+    private let fileService = HermesFileService()
 
     var recentSessions: [HermesSession] = []
     var sessionPreviews: [String: String] = [:]
     var terminalView: LocalProcessTerminalView?
     var hasActiveProcess = false
+    var voiceEnabled = false
+    var ttsEnabled = false
+    var isRecording = false
     private var coordinator: Coordinator?
 
     var hermesBinaryExists: Bool {
@@ -17,14 +21,23 @@ final class ChatViewModel {
     }
 
     func startNewSession() {
+        voiceEnabled = false
+        ttsEnabled = false
+        isRecording = false
         launchTerminal(arguments: ["chat"])
     }
 
     func resumeSession(_ sessionId: String) {
+        voiceEnabled = false
+        ttsEnabled = false
+        isRecording = false
         launchTerminal(arguments: ["chat", "--resume", sessionId])
     }
 
     func continueLastSession() {
+        voiceEnabled = false
+        ttsEnabled = false
+        isRecording = false
         launchTerminal(arguments: ["chat", "--continue"])
     }
 
@@ -42,6 +55,38 @@ final class ChatViewModel {
         return session.id
     }
 
+    func toggleVoice() {
+        guard let tv = terminalView else { return }
+        if voiceEnabled {
+            sendToTerminal(tv, text: "/voice off\r")
+            voiceEnabled = false
+            isRecording = false
+        } else {
+            sendToTerminal(tv, text: "/voice on\r")
+            voiceEnabled = true
+            ttsEnabled = fileService.loadConfig().autoTTS
+        }
+    }
+
+    func toggleTTS() {
+        guard let tv = terminalView, voiceEnabled else { return }
+        sendToTerminal(tv, text: "/voice tts\r")
+        ttsEnabled.toggle()
+    }
+
+    func pushToTalk() {
+        guard let tv = terminalView, voiceEnabled else { return }
+        // Ctrl+B = ASCII 0x02
+        let ctrlB: [UInt8] = [0x02]
+        tv.send(source: tv, data: ctrlB[0..<1])
+        isRecording.toggle()
+    }
+
+    private func sendToTerminal(_ tv: LocalProcessTerminalView, text: String) {
+        let bytes = Array(text.utf8)
+        tv.send(source: tv, data: bytes[0..<bytes.count])
+    }
+
     private func launchTerminal(arguments: [String]) {
         if let existing = terminalView {
             existing.terminate()
@@ -55,6 +100,8 @@ final class ChatViewModel {
 
         let coord = Coordinator(onTerminated: { [weak self] in
             self?.hasActiveProcess = false
+            self?.voiceEnabled = false
+            self?.isRecording = false
         })
         terminal.processDelegate = coord
         self.coordinator = coord
