@@ -158,10 +158,10 @@ final class SessionsViewModel {
         let fileSize: String
         if let attrs = try? FileManager.default.attributesOfItem(atPath: dbPath),
            let size = attrs[.size] as? Int {
-            if size >= 1_048_576 {
-                fileSize = String(format: "%.1f MB", Double(size) / 1_048_576)
+            if Double(size) >= FileSizeUnit.megabyte {
+                fileSize = String(format: "%.1f MB", Double(size) / FileSizeUnit.megabyte)
             } else {
-                fileSize = String(format: "%.0f KB", Double(size) / 1_024)
+                fileSize = String(format: "%.0f KB", Double(size) / FileSizeUnit.kilobyte)
             }
         } else {
             fileSize = "unknown"

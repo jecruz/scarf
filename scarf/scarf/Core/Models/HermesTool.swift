@@ -16,8 +16,9 @@ struct HermesToolPlatform: Identifiable, Sendable {
 }
 
 enum KnownPlatforms {
+    static let cli = HermesToolPlatform(name: "cli", displayName: "CLI", icon: "terminal")
     static let all: [HermesToolPlatform] = [
-        HermesToolPlatform(name: "cli", displayName: "CLI", icon: "terminal"),
+        cli,
         HermesToolPlatform(name: "telegram", displayName: "Telegram", icon: "paperplane"),
         HermesToolPlatform(name: "discord", displayName: "Discord", icon: "bubble.left.and.bubble.right"),
         HermesToolPlatform(name: "slack", displayName: "Slack", icon: "number"),

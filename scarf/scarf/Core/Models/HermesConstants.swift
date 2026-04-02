@@ -1,8 +1,11 @@
 import Foundation
+import SQLite3
 
 enum HermesPaths: Sendable {
-    // Using ProcessInfo to avoid main-actor isolation issues with FileManager/NSHomeDirectory
-    nonisolated static let home: String = ProcessInfo.processInfo.environment["HOME"]! + "/.hermes"
+    private nonisolated static let userHome: String = ProcessInfo.processInfo.environment["HOME"]
+        ?? NSHomeDirectory()
+
+    nonisolated static let home: String = userHome + "/.hermes"
     nonisolated static let stateDB: String = home + "/state.db"
     nonisolated static let configYAML: String = home + "/config.yaml"
     nonisolated static let memoriesDir: String = home + "/memories"
@@ -15,7 +18,32 @@ enum HermesPaths: Sendable {
     nonisolated static let skillsDir: String = home + "/skills"
     nonisolated static let errorsLog: String = home + "/logs/errors.log"
     nonisolated static let gatewayLog: String = home + "/logs/gateway.log"
-    nonisolated static let hermesBinary: String = ProcessInfo.processInfo.environment["HOME"]! + "/.local/bin/hermes"
+    nonisolated static let hermesBinary: String = userHome + "/.local/bin/hermes"
     nonisolated static let scarfDir: String = home + "/scarf"
     nonisolated static let projectsRegistry: String = scarfDir + "/projects.json"
+}
+
+// MARK: - SQLite Constants
+
+/// SQLITE_TRANSIENT tells SQLite to make its own copy of bound string data.
+/// The C macro is defined as ((sqlite3_destructor_type)-1) which can't be imported directly into Swift.
+nonisolated let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+// MARK: - Query Defaults
+
+enum QueryDefaults: Sendable {
+    nonisolated static let sessionLimit = 100
+    nonisolated static let messageSearchLimit = 50
+    nonisolated static let toolCallLimit = 50
+    nonisolated static let sessionPreviewLimit = 10
+    nonisolated static let previewContentLength = 100
+    nonisolated static let logLineLimit = 200
+    nonisolated static let defaultSilenceThreshold = 200
+}
+
+// MARK: - File Size Formatting
+
+enum FileSizeUnit: Sendable {
+    nonisolated static let kilobyte = 1_024.0
+    nonisolated static let megabyte = 1_048_576.0
 }

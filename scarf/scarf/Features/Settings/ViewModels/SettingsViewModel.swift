@@ -18,7 +18,12 @@ final class SettingsViewModel {
         config = fileService.loadConfig()
         gatewayState = fileService.loadGatewayState()
         hermesRunning = fileService.isHermesRunning()
-        rawConfigYAML = (try? String(contentsOfFile: HermesPaths.configYAML, encoding: .utf8)) ?? ""
+        do {
+            rawConfigYAML = try String(contentsOfFile: HermesPaths.configYAML, encoding: .utf8)
+        } catch {
+            print("[Scarf] Failed to read config.yaml: \(error.localizedDescription)")
+            rawConfigYAML = ""
+        }
         personalities = parsePersonalities()
     }
 

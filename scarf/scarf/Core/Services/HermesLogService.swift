@@ -39,12 +39,16 @@ actor HermesLogService {
     }
 
     func closeLog() {
-        try? fileHandle?.close()
+        do {
+            try fileHandle?.close()
+        } catch {
+            print("[Scarf] Failed to close log handle: \(error.localizedDescription)")
+        }
         fileHandle = nil
         currentPath = nil
     }
 
-    func readLastLines(count: Int = 200) -> [LogEntry] {
+    func readLastLines(count: Int = QueryDefaults.logLineLimit) -> [LogEntry] {
         guard let path = currentPath,
               let data = FileManager.default.contents(atPath: path) else { return [] }
         let content = String(data: data, encoding: .utf8) ?? ""
