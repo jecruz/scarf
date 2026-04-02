@@ -44,7 +44,7 @@ struct HermesFileService: Sendable {
             showReasoning: values["display.show_reasoning"] == "true",
             verbose: values["agent.verbose"] == "true",
             autoTTS: values["voice.auto_tts"] != "false",
-            silenceThreshold: Int(values["voice.silence_threshold"] ?? "") ?? 200
+            silenceThreshold: Int(values["voice.silence_threshold"] ?? "") ?? QueryDefaults.defaultSilenceThreshold
         )
     }
 
@@ -52,7 +52,12 @@ struct HermesFileService: Sendable {
 
     func loadGatewayState() -> GatewayState? {
         guard let data = readFileData(HermesPaths.gatewayStateJSON) else { return nil }
-        return try? JSONDecoder().decode(GatewayState.self, from: data)
+        do {
+            return try JSONDecoder().decode(GatewayState.self, from: data)
+        } catch {
+            print("[Scarf] Failed to decode gateway state: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     // MARK: - Memory
@@ -77,8 +82,13 @@ struct HermesFileService: Sendable {
 
     func loadCronJobs() -> [HermesCronJob] {
         guard let data = readFileData(HermesPaths.cronJobsJSON) else { return [] }
-        let file = try? JSONDecoder().decode(CronJobsFile.self, from: data)
-        return file?.jobs ?? []
+        do {
+            let file = try JSONDecoder().decode(CronJobsFile.self, from: data)
+            return file.jobs
+        } catch {
+            print("[Scarf] Failed to decode cron jobs: \(error.localizedDescription)")
+            return []
+        }
     }
 
     func loadCronOutput(jobId: String) -> String? {
@@ -123,7 +133,13 @@ struct HermesFileService: Sendable {
     }
 
     func loadSkillContent(path: String) -> String {
-        readFile(path) ?? ""
+        // Validate path stays within the skills directory to prevent traversal
+        guard !path.contains(".."),
+              path.hasPrefix(HermesPaths.skillsDir) else {
+            print("[Scarf] Rejected skill path outside skills directory: \(path)")
+            return ""
+        }
+        return readFile(path) ?? ""
     }
 
     // MARK: - Hermes Process
@@ -156,6 +172,10 @@ struct HermesFileService: Sendable {
     }
 
     private func writeFile(_ path: String, content: String) {
-        try? content.write(toFile: path, atomically: true, encoding: .utf8)
+        do {
+            try content.write(toFile: path, atomically: true, encoding: .utf8)
+        } catch {
+            print("[Scarf] Failed to write \(path): \(error.localizedDescription)")
+        }
     }
 }

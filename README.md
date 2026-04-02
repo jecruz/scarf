@@ -30,7 +30,7 @@
 - **Gateway Control** — Start/stop/restart the messaging gateway, view platform connection status, manage user pairing (approve/revoke)
 - **Cron Manager** — View scheduled jobs, their status, prompts, and output
 - **Log Viewer** — Real-time log tailing with level filtering and text search
-- **Project Dashboards** — Custom, agent-generated dashboards for any project. Define stat boxes, charts, tables, progress bars, checklists, and rich text in a simple JSON file — Scarf renders them with live refresh. Let your Hermes agent build and maintain project-specific visualizations automatically
+- **Project Dashboards** — Custom, agent-generated dashboards for any project. Define stat boxes, charts, tables, progress bars, checklists, rich text, and embedded web views in a simple JSON file — Scarf renders them with live refresh. Let your Hermes agent build and maintain project-specific visualizations automatically
 - **Settings** — Structured config editor for all Hermes settings
 - **Menu Bar** — Status icon showing Hermes running state with quick actions
 
@@ -144,7 +144,7 @@ The app sandbox is disabled because Scarf needs direct access to `~/.hermes/` an
 
 ## Project Dashboards
 
-Project Dashboards turn Scarf into a customizable monitoring hub for all your projects. You define a simple JSON file in your project folder describing what to display — stat boxes, charts, tables, progress bars, checklists, and rich text — and Scarf renders it as a live-updating dashboard. Your Hermes agent can generate and maintain these dashboards automatically.
+Project Dashboards turn Scarf into a customizable monitoring hub for all your projects. You define a simple JSON file in your project folder describing what to display — stat boxes, charts, tables, progress bars, checklists, rich text, and embedded web views — and Scarf renders it as a live-updating dashboard. Your Hermes agent can generate and maintain these dashboards automatically.
 
 ### What You Can Build
 
@@ -153,6 +153,7 @@ Project Dashboards turn Scarf into a customizable monitoring hub for all your pr
 - **Deployment monitors** — deploy history tables, uptime stats, error rate charts
 - **Research dashboards** — experiment results, key findings, paper status checklists
 - **Agent activity views** — cron job results, content generation stats, task completion rates
+- **Embedded web apps** — local dev servers, HTML reports, Grafana dashboards, any web-based tool your agent generates
 - **Any project status** — if your agent can measure it, Scarf can display it
 
 ### Quick Start
@@ -227,6 +228,23 @@ Select your project in the Projects sidebar — the dashboard renders immediatel
 | `table` | Data table with headers | `columns`, `rows` |
 | `chart` | Line, bar, or pie chart | `chartType`, `series` (each with `name`, `color`, `data`) |
 | `list` | Checklist with status indicators | `items` (each with `text`, `status`: done/active/pending) |
+| `webview` | Embedded web browser | `url`, `height` (default 400) |
+
+The `webview` widget embeds a live web browser directly in your dashboard — perfect for displaying local dev servers, HTML reports, or any web-based tool your agent generates.
+
+When a dashboard includes a webview widget, Scarf adds a tabbed interface: **Dashboard** shows your normal widgets, **Site** shows the web content full-canvas with clean margins — using the entire available space in the app. This gives you the best of both worlds: compact metrics at a glance, and a full embedded browser when you need it.
+
+```json
+{
+  "type": "webview",
+  "title": "Project Report",
+  "url": "http://localhost:8000/dashboard",
+  "height": 500
+}
+```
+
+- `url`: Any URL — typically a local server (`http://localhost:...`) or file path
+- `height`: Height in points when displayed as an inline widget card (default: 400). The Site tab always uses full available space regardless of this setting.
 
 **Colors**: red, orange, yellow, green, blue, purple, pink, teal, indigo, mint, brown, gray
 
@@ -236,7 +254,7 @@ Select your project in the Projects sidebar — the dashboard renders immediatel
 
 The real power is letting your Hermes agent build and update dashboards automatically. Add instructions like this to your agent's context:
 
-> Analyze this project and create a `.scarf/dashboard.json` dashboard with relevant metrics and status. Use stat widgets for key numbers, charts for trends, tables for structured data, and lists for task tracking. Register the project in `~/.hermes/scarf/projects.json` if not already registered.
+> Analyze this project and create a `.scarf/dashboard.json` dashboard with relevant metrics and status. Use stat widgets for key numbers, charts for trends, tables for structured data, lists for task tracking, and a webview widget if the project has a local web server or HTML reports. Register the project in `~/.hermes/scarf/projects.json` if not already registered.
 
 Your agent can update the dashboard as part of cron jobs, after builds, or whenever project state changes. Since Scarf watches the file, updates appear in real-time.
 

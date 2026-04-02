@@ -24,7 +24,7 @@ actor HermesDataService {
         db = nil
     }
 
-    func fetchSessions(limit: Int = 100) -> [HermesSession] {
+    func fetchSessions(limit: Int = QueryDefaults.sessionLimit) -> [HermesSession] {
         guard let db else { return [] }
         let sql = """
             SELECT id, source, user_id, model, title, parent_session_id,
@@ -59,7 +59,7 @@ actor HermesDataService {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_text(stmt, 1, sessionId, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(stmt, 1, sessionId, -1, sqliteTransient)
 
         var messages: [HermesMessage] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -68,7 +68,7 @@ actor HermesDataService {
         return messages
     }
 
-    func searchMessages(query: String, limit: Int = 50) -> [HermesMessage] {
+    func searchMessages(query: String, limit: Int = QueryDefaults.messageSearchLimit) -> [HermesMessage] {
         guard let db else { return [] }
         let sql = """
             SELECT m.id, m.session_id, m.role, m.content, m.tool_call_id, m.tool_calls,
@@ -82,7 +82,7 @@ actor HermesDataService {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_text(stmt, 1, query, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(stmt, 1, query, -1, sqliteTransient)
         sqlite3_bind_int(stmt, 2, Int32(limit))
 
         var messages: [HermesMessage] = []
@@ -92,7 +92,7 @@ actor HermesDataService {
         return messages
     }
 
-    func fetchRecentToolCalls(limit: Int = 50) -> [HermesMessage] {
+    func fetchRecentToolCalls(limit: Int = QueryDefaults.toolCallLimit) -> [HermesMessage] {
         guard let db else { return [] }
         let sql = """
             SELECT id, session_id, role, content, tool_call_id, tool_calls,
@@ -114,10 +114,10 @@ actor HermesDataService {
         return messages
     }
 
-    func fetchSessionPreviews(limit: Int = 10) -> [String: String] {
+    func fetchSessionPreviews(limit: Int = QueryDefaults.sessionPreviewLimit) -> [String: String] {
         guard let db else { return [:] }
         let sql = """
-            SELECT m.session_id, substr(m.content, 1, 100)
+            SELECT m.session_id, substr(m.content, 1, \(QueryDefaults.previewContentLength))
             FROM messages m
             INNER JOIN (
                 SELECT session_id, MIN(id) as min_id
@@ -149,13 +149,15 @@ actor HermesDataService {
         let totalInputTokens: Int
         let totalOutputTokens: Int
         let totalCostUSD: Double
+
+        static let empty = SessionStats(
+            totalSessions: 0, totalMessages: 0, totalToolCalls: 0,
+            totalInputTokens: 0, totalOutputTokens: 0, totalCostUSD: 0
+        )
     }
 
     func fetchStats() -> SessionStats {
-        guard let db else {
-            return SessionStats(totalSessions: 0, totalMessages: 0, totalToolCalls: 0,
-                                totalInputTokens: 0, totalOutputTokens: 0, totalCostUSD: 0)
-        }
+        guard let db else { return .empty }
         let sql = """
             SELECT COUNT(*), COALESCE(SUM(message_count),0), COALESCE(SUM(tool_call_count),0),
                    COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0),
@@ -163,16 +165,9 @@ actor HermesDataService {
             FROM sessions
             """
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            return SessionStats(totalSessions: 0, totalMessages: 0, totalToolCalls: 0,
-                                totalInputTokens: 0, totalOutputTokens: 0, totalCostUSD: 0)
-        }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return .empty }
         defer { sqlite3_finalize(stmt) }
-
-        guard sqlite3_step(stmt) == SQLITE_ROW else {
-            return SessionStats(totalSessions: 0, totalMessages: 0, totalToolCalls: 0,
-                                totalInputTokens: 0, totalOutputTokens: 0, totalCostUSD: 0)
-        }
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return .empty }
         return SessionStats(
             totalSessions: Int(sqlite3_column_int(stmt, 0)),
             totalMessages: Int(sqlite3_column_int(stmt, 1)),
@@ -344,7 +339,12 @@ actor HermesDataService {
     private func parseToolCalls(_ json: String?) -> [HermesToolCall] {
         guard let json, !json.isEmpty,
               let data = json.data(using: .utf8) else { return [] }
-        return (try? JSONDecoder().decode([HermesToolCall].self, from: data)) ?? []
+        do {
+            return try JSONDecoder().decode([HermesToolCall].self, from: data)
+        } catch {
+            print("[Scarf] Failed to decode tool calls: \(error.localizedDescription)")
+            return []
+        }
     }
 
     private func columnText(_ stmt: OpaquePointer, _ col: Int32) -> String {

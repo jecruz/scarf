@@ -2,7 +2,7 @@ import Foundation
 
 @Observable
 final class ToolsViewModel {
-    var selectedPlatform: HermesToolPlatform = KnownPlatforms.all[0]
+    var selectedPlatform: HermesToolPlatform = KnownPlatforms.cli
     var toolsets: [HermesToolset] = []
     var mcpStatus: String = ""
     var isLoading = false
@@ -30,7 +30,13 @@ final class ToolsViewModel {
     }
 
     private func loadPlatforms() {
-        let config = (try? String(contentsOfFile: HermesPaths.configYAML, encoding: .utf8)) ?? ""
+        let config: String
+        do {
+            config = try String(contentsOfFile: HermesPaths.configYAML, encoding: .utf8)
+        } catch {
+            print("[Scarf] Failed to read config.yaml: \(error.localizedDescription)")
+            config = ""
+        }
         var platforms: [HermesToolPlatform] = []
         var inSection = false
         for line in config.components(separatedBy: "\n") {
@@ -54,9 +60,10 @@ final class ToolsViewModel {
                 }
             }
         }
-        availablePlatforms = platforms.isEmpty ? [KnownPlatforms.all[0]] : platforms
-        if !availablePlatforms.contains(where: { $0.name == selectedPlatform.name }) {
-            selectedPlatform = availablePlatforms[0]
+        availablePlatforms = platforms.isEmpty ? [KnownPlatforms.cli] : platforms
+        if !availablePlatforms.contains(where: { $0.name == selectedPlatform.name }),
+           let first = availablePlatforms.first {
+            selectedPlatform = first
         }
     }
 

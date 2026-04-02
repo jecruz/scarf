@@ -8,14 +8,23 @@ struct ProjectDashboardService: Sendable {
         guard let data = FileManager.default.contents(atPath: HermesPaths.projectsRegistry) else {
             return ProjectRegistry(projects: [])
         }
-        return (try? JSONDecoder().decode(ProjectRegistry.self, from: data))
-            ?? ProjectRegistry(projects: [])
+        do {
+            return try JSONDecoder().decode(ProjectRegistry.self, from: data)
+        } catch {
+            print("[Scarf] Failed to decode project registry: \(error.localizedDescription)")
+            return ProjectRegistry(projects: [])
+        }
     }
 
     func saveRegistry(_ registry: ProjectRegistry) {
         let dir = HermesPaths.scarfDir
         if !FileManager.default.fileExists(atPath: dir) {
-            try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+            do {
+                try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+            } catch {
+                print("[Scarf] Failed to create scarf directory: \(error.localizedDescription)")
+                return
+            }
         }
         guard let data = try? JSONEncoder().encode(registry) else { return }
         // Pretty-print for readability (agents may read this file)
@@ -33,7 +42,12 @@ struct ProjectDashboardService: Sendable {
         guard let data = FileManager.default.contents(atPath: project.dashboardPath) else {
             return nil
         }
-        return try? JSONDecoder().decode(ProjectDashboard.self, from: data)
+        do {
+            return try JSONDecoder().decode(ProjectDashboard.self, from: data)
+        } catch {
+            print("[Scarf] Failed to decode dashboard for \(project.name): \(error.localizedDescription)")
+            return nil
+        }
     }
 
     func dashboardExists(for project: ProjectEntry) -> Bool {
