@@ -1,10 +1,16 @@
 import SwiftUI
 
+private enum DashboardTab: String, CaseIterable {
+    case dashboard = "Dashboard"
+    case site = "Site"
+}
+
 struct ProjectsView: View {
     @State private var viewModel = ProjectsViewModel()
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(HermesFileWatcher.self) private var fileWatcher
     @State private var showingAddSheet = false
+    @State private var selectedTab: DashboardTab = .dashboard
 
     var body: some View {
         HSplitView {
@@ -76,18 +82,36 @@ struct ProjectsView: View {
 
     // MARK: - Dashboard Area
 
+    /// First webview widget found across all sections, if any.
+    private var siteWidget: DashboardWidget? {
+        viewModel.dashboard?.sections
+            .flatMap(\.widgets)
+            .first { $0.type == "webview" }
+    }
+
     @ViewBuilder
     private var dashboardArea: some View {
         if let dashboard = viewModel.dashboard {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    dashboardHeader(dashboard)
-                    ForEach(dashboard.sections) { section in
-                        DashboardSectionView(section: section)
+            VStack(spacing: 0) {
+                dashboardHeader(dashboard)
+                    .padding(.horizontal)
+                    .padding(.top)
+                    .padding(.bottom, 8)
+                if siteWidget != nil {
+                    tabBar
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                }
+                switch selectedTab {
+                case .dashboard:
+                    widgetsTab(dashboard)
+                case .site:
+                    if let widget = siteWidget {
+                        siteTab(widget)
+                    } else {
+                        widgetsTab(dashboard)
                     }
                 }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         } else if let error = viewModel.dashboardError {
             ContentUnavailableView {
@@ -110,6 +134,48 @@ struct ProjectsView: View {
                 Text("Choose a project from the sidebar to view its dashboard.")
             }
         }
+    }
+
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(DashboardTab.allCases, id: \.self) { tab in
+                Button {
+                    selectedTab = tab
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: tab == .dashboard ? "square.grid.2x2" : "globe")
+                            .font(.caption)
+                        Text(tab.rawValue)
+                            .font(.subheadline)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(selectedTab == tab ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+    }
+
+    private func widgetsTab(_ dashboard: ProjectDashboard) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ForEach(dashboard.sections) { section in
+                    DashboardSectionView(section: section)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private func siteTab(_ widget: DashboardWidget) -> some View {
+        WebviewWidgetView(widget: widget, fullCanvas: true)
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func dashboardHeader(_ dashboard: ProjectDashboard) -> some View {
@@ -152,51 +218,21 @@ struct ProjectsView: View {
 struct DashboardSectionView: View {
     let section: DashboardSection
 
-    private var gridWidgets: [DashboardWidget] {
+    /// Filter out webview widgets — those are rendered in the Site tab instead.
+    private var displayWidgets: [DashboardWidget] {
         section.widgets.filter { $0.type != "webview" }
     }
 
-    private var webviewWidgets: [DashboardWidget] {
-        section.widgets.filter { $0.type == "webview" }
-    }
-
-    private var hasWebview: Bool { !webviewWidgets.isEmpty }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(section.title)
-                .font(.headline)
-            if hasWebview && !gridWidgets.isEmpty {
-                // Split layout: widgets on left, webview on right
-                HStack(alignment: .top, spacing: 12) {
-                    LazyVGrid(
-                        columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: max(1, section.columnCount / 2)),
-                        spacing: 12
-                    ) {
-                        ForEach(gridWidgets) { widget in
-                            WidgetView(widget: widget)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    VStack(spacing: 12) {
-                        ForEach(webviewWidgets) { widget in
-                            WebviewWidgetView(widget: widget)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            } else if hasWebview {
-                // Webview only — full width
-                ForEach(webviewWidgets) { widget in
-                    WebviewWidgetView(widget: widget)
-                }
-            } else {
-                // Standard grid
+        if !displayWidgets.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(section.title)
+                    .font(.headline)
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: section.columnCount),
                     spacing: 12
                 ) {
-                    ForEach(gridWidgets) { widget in
+                    ForEach(displayWidgets) { widget in
                         WidgetView(widget: widget)
                     }
                 }

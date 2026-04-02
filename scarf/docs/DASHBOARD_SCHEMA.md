@@ -155,7 +155,7 @@ Create `.scarf/dashboard.json` in your project root:
 - `url`: Any URL — local servers, file paths, or remote pages
 - `height`: Height in points (optional, default: 400)
 
-When a section contains a webview alongside other widgets, Scarf splits the layout automatically: grid widgets on the left, webview on the right. If the section contains only a webview, it uses the full width.
+When a dashboard includes a webview widget, Scarf adds a tabbed interface: **Dashboard** shows all normal widgets, **Site** displays the web content full-canvas. The webview widget is automatically filtered out of the Dashboard tab's grid layout.
 
 ## Agent Instructions
 

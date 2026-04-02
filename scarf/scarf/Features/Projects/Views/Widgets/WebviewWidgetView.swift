@@ -3,6 +3,7 @@ import WebKit
 
 struct WebviewWidgetView: View {
     let widget: DashboardWidget
+    var fullCanvas: Bool = false
 
     private var webURL: URL? {
         guard let urlString = widget.url else { return nil }
@@ -14,6 +15,34 @@ struct WebviewWidgetView: View {
     }
 
     var body: some View {
+        if fullCanvas {
+            fullCanvasView
+        } else {
+            cardView
+        }
+    }
+
+    // MARK: - Full Canvas (Site tab)
+
+    private var fullCanvasView: some View {
+        VStack(spacing: 0) {
+            if let url = webURL {
+                WebViewRepresentable(url: url)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                ContentUnavailableView {
+                    Label("Invalid URL", systemImage: "globe")
+                } description: {
+                    Text(widget.url ?? "No URL provided")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Card (inline widget)
+
+    private var cardView: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 if let icon = widget.icon {
